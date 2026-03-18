@@ -554,7 +554,7 @@
 
       <!-- Countdown Timer Card -->
       <section class="countdown-card">
-        <div class="timer-display" aria-live="polite" :aria-label="'Timer: ' + displayHours + ' hours ' + displayMinutes + ' minutes ' + displaySeconds + ' seconds'">
+        <div class="timer-display" :aria-label="timerAriaLabel" role="timer">
 
           <!-- Hours -->
           <div class="digit-group">
@@ -664,6 +664,9 @@
       <footer class="page-footer">
         Made with &#10084;&#65039; and &#129302; for the Cursor global community
       </footer>
+
+      <!-- Screen reader announcements (state changes only) -->
+      <div aria-live="assertive" aria-atomic="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">{{ ariaAnnouncement }}</div>
 
     </main>
 
@@ -798,6 +801,25 @@
           String(remainingSeconds.value % 60).padStart(2, '0')
         );
 
+        // ── Accessibility: aria-label from inputs when idle, from remaining when running ──
+        const timerAriaLabel = computed(() => {
+          if (timerState.value === 'idle') {
+            const h = inputHours.value || 0;
+            const m = inputMinutes.value || 0;
+            const s = inputSeconds.value || 0;
+            return 'Timer set to: ' + h + ' hours ' + m + ' minutes ' + s + ' seconds';
+          }
+          return 'Timer: ' + displayHours.value + ' hours ' + displayMinutes.value + ' minutes ' + displaySeconds.value + ' seconds';
+        });
+
+        // Only announce on state changes, not every tick
+        const ariaAnnouncement = ref('');
+
+        function announce(msg) {
+          ariaAnnouncement.value = '';
+          nextTick(() => { ariaAnnouncement.value = msg; });
+        }
+
         // ── Timer logic ──
         function tick() {
           if (remainingSeconds.value <= 1) {
@@ -805,6 +827,7 @@
             stopInterval();
             timerState.value = 'idle';
             showModal.value = true;
+            announce("Time's up. The countdown has finished.");
             return;
           }
           remainingSeconds.value--;
@@ -831,22 +854,26 @@
           remainingSeconds.value = total;
           timerState.value = 'running';
           startInterval();
+          announce('Timer started: ' + displayHours.value + ' hours ' + displayMinutes.value + ' minutes ' + displaySeconds.value + ' seconds');
         }
 
         function pauseTimer() {
           timerState.value = 'paused';
           stopInterval();
+          announce('Timer paused at ' + displayHours.value + ':' + displayMinutes.value + ':' + displaySeconds.value);
         }
 
         function resumeTimer() {
           timerState.value = 'running';
           startInterval();
+          announce('Timer resumed');
         }
 
         function resetTimer() {
           stopInterval();
           timerState.value = 'idle';
           remainingSeconds.value = 0;
+          announce('Timer reset');
         }
 
         // ── Modal ──
@@ -898,6 +925,7 @@
           totalInputSeconds,
           remainingSeconds, timerState, showModal,
           displayHours, displayMinutes, displaySeconds,
+          timerAriaLabel, ariaAnnouncement,
           startTimer, pauseTimer, resumeTimer, resetTimer,
           closeModal, closeBtn,
         };
