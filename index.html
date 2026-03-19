@@ -1,936 +1,1278 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="dark">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cursor Countdown</title>
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    [v-cloak] { display: none; }
-
-    /* ── Dark theme (default) ── */
-    [data-theme="dark"] {
-      --bg-primary: #0a0a0a;
-      --bg-surface: #141414;
-      --bg-elevated: #1a1a1a;
-      --text-primary: #ffffff;
-      --text-secondary: #888888;
-      --text-tertiary: #555555;
-      --border-color: rgba(255, 255, 255, 0.08);
-      --border-hover: rgba(255, 255, 255, 0.15);
-      --glass-bg: rgba(255, 255, 255, 0.03);
-      --glass-border: rgba(255, 255, 255, 0.08);
-      --glass-blur: 20px;
-    }
-
-    /* ── Light theme ── */
-    [data-theme="light"] {
-      --bg-primary: #ffffff;
-      --bg-surface: #f7f7f7;
-      --bg-elevated: #eeeeee;
-      --text-primary: #0a0a0a;
-      --text-secondary: #666666;
-      --text-tertiary: #999999;
-      --border-color: rgba(0, 0, 0, 0.08);
-      --border-hover: rgba(0, 0, 0, 0.15);
-      --glass-bg: rgba(0, 0, 0, 0.02);
-      --glass-border: rgba(0, 0, 0, 0.08);
-      --glass-blur: 20px;
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      transition: background-color 0.3s ease, color 0.3s ease;
-    }
-
-    /* ── Theme toggle (pill, top-right) ── */
-    .theme-toggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 50;
-      display: flex;
-      align-items: center;
-      background: var(--bg-surface);
-      border: 1px solid var(--border-color);
-      border-radius: 22px;
-      padding: 3px;
-      transition: background-color 0.3s ease, border-color 0.3s ease;
-    }
-
-    .toggle-opt {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: 18px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      color: var(--text-tertiary);
-      transition: all 0.2s ease;
-    }
-
-    .toggle-opt.active {
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-    }
-
-    .toggle-opt:focus-visible {
-      outline: 2px solid var(--text-secondary);
-      outline-offset: 1px;
-    }
-
-    .toggle-opt svg { width: 16px; height: 16px; }
-
-    /* ── Main container ── */
-    .page-main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-      max-width: 600px;
-      padding: 0 24px;
-    }
-
-    /* ── Hero / Logo ── */
-    .hero {
-      padding: 64px 0 48px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .logo-dark, .logo-light { width: 240px; height: auto; }
-    [data-theme="dark"] .logo-light,
-    [data-theme="light"] .logo-dark { display: none; }
-    [data-theme="dark"] .logo-dark,
-    [data-theme="light"] .logo-light { display: block; }
-
-    /* ── Event info ── */
-    .event-info {
-      text-align: center;
-      margin-bottom: 32px;
-      width: 100%;
-    }
-
-    .event-name-display {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      background: none;
-      border: 0;
-      padding: 0;
-      font: inherit;
-      color: inherit;
-    }
-
-    .event-name-display:hover .edit-icon,
-    .event-name-display:focus-visible .edit-icon { opacity: 1; }
-
-    .event-name-text {
-      font-size: 1.75rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
-    }
-
-    .edit-icon, .cal-icon {
-      width: 16px;
-      height: 16px;
-      color: var(--text-tertiary);
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      flex-shrink: 0;
-    }
-
-    .event-name-input {
-      font-family: 'Inter', sans-serif;
-      font-size: 1.75rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid var(--border-hover);
-      outline: none;
-      text-align: center;
-      padding: 2px 0;
-      width: 100%;
-      max-width: 400px;
-      transition: border-color 0.2s ease;
-    }
-
-    .event-name-input:focus { border-bottom-color: var(--text-secondary); }
-
-    .event-date-row {
-      margin-top: 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      position: relative;
-      background: none;
-      border: 0;
-      padding: 0;
-      font: inherit;
-      color: inherit;
-    }
-
-    .event-date-row:hover .cal-icon,
-    .event-date-row:focus-visible .cal-icon { opacity: 1; }
-
-    .event-date-text {
-      font-size: 1rem;
-      font-weight: 400;
-      color: var(--text-secondary);
-      transition: color 0.2s ease;
-    }
-
-    .event-date-row:hover .event-date-text { color: var(--text-primary); }
-
-    .date-input-hidden {
-      position: absolute;
-      opacity: 0;
-      width: 0;
-      height: 0;
-      pointer-events: none;
-    }
-
-    .event-date-native {
-      font-family: 'Inter', sans-serif;
-      font-size: 1rem;
-      font-weight: 400;
-      color: var(--text-secondary);
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid var(--border-hover);
-      outline: none;
-      text-align: center;
-      padding: 2px 0;
-      color-scheme: dark;
-    }
-
-    [data-theme="light"] .event-date-native { color-scheme: light; }
-
-    /* ── Countdown card (glassmorphism) ── */
-    .countdown-card {
-      background: var(--glass-bg);
-      backdrop-filter: blur(var(--glass-blur));
-      -webkit-backdrop-filter: blur(var(--glass-blur));
-      border: 1px solid var(--glass-border);
-      border-radius: 16px;
-      padding: 48px 40px;
-      width: 100%;
-      transition: background-color 0.3s ease, border-color 0.3s ease;
-    }
-
-    /* ── Timer display ── */
-    .timer-display {
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-    }
-
-    .digit-group {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .digit-value {
-      font-size: clamp(2.5rem, 8vw, 5rem);
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      line-height: 1;
-      color: var(--text-primary);
-      letter-spacing: -0.02em;
-      display: inline-block;
-    }
-
-    .digit-value.animate {
-      animation: digit-fade 400ms ease-in-out;
-    }
-
-    @keyframes digit-fade {
-      0%   { opacity: 0.4; }
-      100% { opacity: 1;   }
-    }
-
-    .digit-label {
-      font-size: 0.7rem;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-secondary);
-    }
-
-    .timer-sep {
-      font-size: clamp(2rem, 6vw, 4rem);
-      font-weight: 300;
-      color: var(--text-secondary);
-      line-height: 1;
-      padding: 0 12px;
-      user-select: none;
-    }
-
-    /* ── Timer inputs ── */
-    .digit-input {
-      font-family: 'Inter', sans-serif;
-      font-size: clamp(2.5rem, 8vw, 5rem);
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      line-height: 1;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid var(--border-color);
-      outline: none;
-      width: 2.6ch;
-      text-align: center;
-      padding: 0;
-      transition: border-color 0.2s ease;
-      -moz-appearance: textfield;
-    }
-
-    .digit-input::-webkit-outer-spin-button,
-    .digit-input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-
-    .digit-input:focus { border-bottom-color: var(--text-secondary); }
-    .digit-input::placeholder { color: var(--text-tertiary); }
-
-    .digit-input.invalid {
-      border-bottom-color: #994444;
-      animation: shake 0.3s ease;
-    }
-
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25%  { transform: translateX(-3px); }
-      75%  { transform: translateX(3px); }
-    }
-
-    /* ── Controls ── */
-    .controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 28px;
-    }
-
-    .btn {
-      font-family: 'Inter', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      padding: 12px 24px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
-      background: transparent;
-      color: var(--text-primary);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      outline: none;
-      min-height: 44px;
-    }
-
-    .btn:hover:not(:disabled) {
-      background: var(--bg-elevated);
-      border-color: var(--border-hover);
-    }
-
-    .btn:active:not(:disabled) { transform: scale(0.97); }
-
-    .btn:focus-visible {
-      outline: 2px solid var(--text-secondary);
-      outline-offset: 2px;
-    }
-
-    .btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-    /* ── Footer ── */
-    .page-footer {
-      padding: 48px 0 24px;
-      text-align: center;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
-
-    /* ── Modal ── */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      animation: fade-in 0.3s ease;
-    }
-
-    @keyframes fade-in {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
-
-    .modal-card {
-      background: var(--glass-bg);
-      backdrop-filter: blur(var(--glass-blur));
-      -webkit-backdrop-filter: blur(var(--glass-blur));
-      border: 1px solid var(--glass-border);
-      border-radius: 16px;
-      padding: 36px 40px;
-      max-width: 400px;
-      width: 90%;
-      text-align: center;
-      animation: modal-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes modal-enter {
-      from { opacity: 0; transform: scale(0.95); }
-      to   { opacity: 1; transform: scale(1);    }
-    }
-
-    .modal-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: var(--text-primary);
-    }
-
-    .modal-subtitle {
-      font-size: 1rem;
-      color: var(--text-secondary);
-      margin-bottom: 28px;
-      line-height: 1.5;
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 520px) {
-      .countdown-card { padding: 32px 20px; }
-      .timer-sep { padding: 0 6px; }
-      .controls { flex-wrap: wrap; }
-      .hero { padding: 48px 0 32px; }
-      .logo-dark, .logo-light { width: 180px; }
-      .event-name-text { font-size: 1.35rem; }
-      .modal-card { padding: 28px 24px; }
-    }
-
-    @media (max-width: 360px) {
-      .digit-input { width: 2.2ch; }
-      .timer-sep { padding: 0 4px; }
-    }
-  </style>
-</head>
-<body>
-  <div id="app" v-cloak>
-
-    <!-- Theme Toggle -->
-    <div class="theme-toggle" role="radiogroup" aria-label="Theme toggle">
-      <button
-        class="toggle-opt"
-        :class="{ active: theme === 'light' }"
-        @click="setTheme('light')"
-        :aria-checked="theme === 'light'"
-        aria-label="Light mode"
-        role="radio"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-        </svg>
-      </button>
-      <button
-        class="toggle-opt"
-        :class="{ active: theme === 'dark' }"
-        @click="setTheme('dark')"
-        :aria-checked="theme === 'dark'"
-        aria-label="Dark mode"
-        role="radio"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
-      </button>
-    </div>
-
-    <main class="page-main">
-
-      <!-- Hero / Logo -->
-      <header class="hero">
-        <!-- Dark-theme logo (light fills for dark backgrounds) -->
-        <svg class="logo-dark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1655.29 900.89" aria-label="Cursor">
-          <g>
-            <path fill="#72716d" d="M827.64,266.66l231.16,133.46c-1.42,2.46-3.48,4.56-6.03,6.03l-216.06,124.74c-5.61,3.24-12.53,3.24-18.14,0l-216.05-124.74c-2.55-1.47-4.61-3.57-6.03-6.03l231.16-133.46h-.01Z"/>
-            <path fill="#55544f" d="M827.64,0v266.66l-231.16,133.46c-1.42-2.46-2.21-5.3-2.21-8.24v-250.44c0-5.89,3.14-11.32,8.24-14.27L818.57,2.43c2.81-1.62,5.94-2.43,9.07-2.43Z"/>
-            <path fill="#43413c" d="M1058.8,133.2c-1.42-2.46-3.48-4.56-6.03-6.03L836.71,2.43c-2.8-1.62-5.94-2.43-9.07-2.43v266.66l231.16,133.46c1.42-2.46,2.21-5.3,2.21-8.24v-250.44c0-2.95-.78-5.77-2.21-8.24Z"/>
-            <path fill="#d6d5d2" d="M1042.63,142.54c1.31,2.26,1.49,5.16,0,7.74l-209.83,363.42c-1.41,2.46-5.16,1.45-5.16-1.38v-239.48c0-1.91-.51-3.75-1.44-5.36l216.42-124.95h.01Z"/>
-            <path fill="#fff" d="M1042.63,142.54l-216.42,124.95c-.92-1.6-2.26-2.96-3.92-3.92l-207.39-119.74c-2.46-1.41-1.45-5.16,1.38-5.16h419.65c2.98,0,5.4,1.61,6.7,3.87h0Z"/>
-          </g>
-          <g>
-            <path fill="#edecec" d="M139.03,626.67h90.64v49.93h-87.57c-47.24,0-84.11,27.27-84.11,84.88s36.87,84.88,84.11,84.88h87.57v49.93h-94.48C56.07,896.29,0,849.81,0,761.47s59.91-134.8,139.03-134.8Z"/>
-            <path fill="#edecec" d="M275.75,626.67h56.07v164.76c0,41.09,18.82,60.3,62.99,60.3s62.99-19.2,62.99-60.3v-164.76h56.07v176.28c0,59.91-38.02,97.94-119.06,97.94s-119.06-38.41-119.06-98.32v-175.9h0Z"/>
-            <path fill="#edecec" d="M806.9,703.1c0,29.96-17.28,53-40.33,62.99v.77c24.2,3.46,36.49,20.74,36.87,44.17l1.15,85.26h-56.07l-1.15-76.04c-.38-16.9-10.37-27.27-30.34-27.27h-93.33v103.31h-56.07v-269.61h154.78c50.7,0,84.49,25.73,84.49,76.43h0ZM750.45,710.78c0-23.04-12.29-35.72-35.33-35.72h-91.41v71.43h92.17c21.12,0,34.57-12.67,34.57-35.72h0Z"/>
-            <path fill="#edecec" d="M1018.9,817.55c0-19.2-12.29-27.27-30.72-28.8l-62.22-5.76c-53.77-4.99-81.81-26.12-81.81-77.2s34.57-79.12,84.11-79.12h137.49v48.39h-133.65c-19.2,0-31.49,9.99-31.49,29.19s12.67,28.42,31.88,29.96l63.37,5.38c48.01,4.22,79.5,26.12,79.5,77.58s-33.41,79.12-80.65,79.12h-143.64v-48.39h138.26c18.05,0,29.57-12.29,29.57-30.34h0Z"/>
-            <path fill="#edecec" d="M1239.35,622.06c84.49,0,137.88,54.15,137.88,139.03s-55.69,139.8-140.18,139.8-137.88-54.92-137.88-139.8,55.69-139.03,140.18-139.03h0ZM1319.24,761.47c0-56.84-33.03-90.25-81.04-90.25s-81.04,33.41-81.04,90.25,33.03,90.25,81.04,90.25,81.04-33.41,81.04-90.25Z"/>
-            <path fill="#edecec" d="M1655.29,703.1c0,29.96-17.28,53-40.33,62.99v.77c24.2,3.46,36.49,20.74,36.87,44.17l1.15,85.26h-56.07l-1.15-76.04c-.38-16.9-10.37-27.27-30.34-27.27h-93.33v103.31h-56.07v-269.61h154.78c50.7,0,84.49,25.73,84.49,76.43h0ZM1598.83,710.78c0-23.04-12.29-35.72-35.33-35.72h-91.41v71.43h92.17c21.12,0,34.57-12.67,34.57-35.72h0Z"/>
-          </g>
-        </svg>
-
-        <!-- Light-theme logo (dark fills for light backgrounds) -->
-        <svg class="logo-light" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1655.29 900.89" aria-label="Cursor">
-          <g>
-            <path fill="#72716d" d="M827.64,266.66l231.16,133.46c-1.42,2.46-3.48,4.56-6.03,6.03l-216.06,124.74c-5.61,3.24-12.53,3.24-18.14,0l-216.05-124.74c-2.55-1.47-4.61-3.57-6.03-6.03l231.16-133.46h-.01Z"/>
-            <path fill="#55544f" d="M827.64,0v266.66l-231.16,133.46c-1.42-2.46-2.21-5.3-2.21-8.24v-250.44c0-5.89,3.14-11.32,8.24-14.27L818.57,2.43c2.81-1.62,5.94-2.43,9.07-2.43Z"/>
-            <path fill="#43413c" d="M1058.8,133.2c-1.42-2.46-3.48-4.56-6.03-6.03L836.71,2.43c-2.8-1.62-5.94-2.43-9.07-2.43v266.66l231.16,133.46c1.42-2.46,2.21-5.3,2.21-8.24v-250.44c0-2.95-.78-5.77-2.21-8.24Z"/>
-            <path fill="#d6d5d2" d="M1042.63,142.54c1.31,2.26,1.49,5.16,0,7.74l-209.83,363.42c-1.41,2.46-5.16,1.45-5.16-1.38v-239.48c0-1.91-.51-3.75-1.44-5.36l216.42-124.95h.01Z"/>
-            <path fill="#fff" d="M1042.63,142.54l-216.42,124.95c-.92-1.6-2.26-2.96-3.92-3.92l-207.39-119.74c-2.46-1.41-1.45-5.16,1.38-5.16h419.65c2.98,0,5.4,1.61,6.7,3.87h0Z"/>
-          </g>
-          <g>
-            <path fill="#26251e" d="M139.03,626.67h90.64v49.93h-87.57c-47.24,0-84.11,27.27-84.11,84.88s36.87,84.88,84.11,84.88h87.57v49.93h-94.48C56.07,896.29,0,849.81,0,761.47s59.91-134.8,139.03-134.8Z"/>
-            <path fill="#26251e" d="M275.75,626.67h56.07v164.76c0,41.09,18.82,60.3,62.99,60.3s62.99-19.2,62.99-60.3v-164.76h56.07v176.28c0,59.91-38.02,97.94-119.06,97.94s-119.06-38.41-119.06-98.32v-175.9h0Z"/>
-            <path fill="#26251e" d="M806.9,703.1c0,29.96-17.28,53-40.33,62.99v.77c24.2,3.46,36.49,20.74,36.87,44.17l1.15,85.26h-56.07l-1.15-76.04c-.38-16.9-10.37-27.27-30.34-27.27h-93.33v103.31h-56.07v-269.61h154.78c50.7,0,84.49,25.73,84.49,76.43h0ZM750.45,710.78c0-23.04-12.29-35.72-35.33-35.72h-91.41v71.43h92.17c21.12,0,34.57-12.67,34.57-35.72h0Z"/>
-            <path fill="#26251e" d="M1018.9,817.55c0-19.2-12.29-27.27-30.72-28.8l-62.22-5.76c-53.77-4.99-81.81-26.12-81.81-77.2s34.57-79.12,84.11-79.12h137.49v48.39h-133.65c-19.2,0-31.49,9.99-31.49,29.19s12.67,28.42,31.88,29.96l63.37,5.38c48.01,4.22,79.5,26.12,79.5,77.58s-33.41,79.12-80.65,79.12h-143.64v-48.39h138.26c18.05,0,29.57-12.29,29.57-30.34h0Z"/>
-            <path fill="#26251e" d="M1239.35,622.06c84.49,0,137.88,54.15,137.88,139.03s-55.69,139.8-140.18,139.8-137.88-54.92-137.88-139.8,55.69-139.03,140.18-139.03h0ZM1319.24,761.47c0-56.84-33.03-90.25-81.04-90.25s-81.04,33.41-81.04,90.25,33.03,90.25,81.04,90.25,81.04-33.41,81.04-90.25Z"/>
-            <path fill="#26251e" d="M1655.29,703.1c0,29.96-17.28,53-40.33,62.99v.77c24.2,3.46,36.49,20.74,36.87,44.17l1.15,85.26h-56.07l-1.15-76.04c-.38-16.9-10.37-27.27-30.34-27.27h-93.33v103.31h-56.07v-269.61h154.78c50.7,0,84.49,25.73,84.49,76.43h0ZM1598.83,710.78c0-23.04-12.29-35.72-35.33-35.72h-91.41v71.43h92.17c21.12,0,34.57-12.67,34.57-35.72h0Z"/>
-          </g>
-        </svg>
-      </header>
-
-      <!-- Event Info (inline editable) -->
-      <section class="event-info">
-        <!-- Event Name -->
-        <button v-if="!isEditingName" type="button" class="event-name-display" @click="startEditingName" aria-label="Edit event name">
-          <h1 class="event-name-text">{{ eventName }}</h1>
-          <svg class="edit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-          </svg>
-        </button>
-        <input
-          v-else
-          ref="nameInput"
-          class="event-name-input"
-          type="text"
-          v-model="eventName"
-          @keydown.enter="confirmName"
-          @blur="confirmName"
-          spellcheck="false"
-        >
-
-        <!-- Event Date -->
-        <button type="button" class="event-date-row" @click="openDatePicker" aria-label="Select event date">
-          <svg class="cal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          <span class="event-date-text">{{ formattedDate }}</span>
-        </button>
-        <input
-          ref="dateInput"
-          class="date-input-hidden"
-          type="date"
-          v-model="eventDate"
-          tabindex="-1"
-        >
-      </section>
-
-      <!-- Countdown Timer Card -->
-      <section class="countdown-card">
-        <div class="timer-display" :aria-label="timerAriaLabel" role="timer">
-
-          <!-- Hours -->
-          <div class="digit-group">
-            <input
-              v-if="timerState === 'idle'"
-              class="digit-input"
-              :class="{ invalid: hoursInvalid }"
-              type="number"
-              min="0"
-              max="99"
-              :value="inputHours"
-              @input="onHoursInput"
-              @blur="clampHours"
-              @focus="$event.target.select()"
-              placeholder="00"
-              aria-label="Hours"
-            >
-            <span
-              v-else
-              class="digit-value"
-              :class="{ animate: timerState === 'running' }"
-              :key="displayHours"
-            >{{ displayHours }}</span>
-            <span class="digit-label">Hours</span>
-          </div>
-
-          <span class="timer-sep">:</span>
-
-          <!-- Minutes -->
-          <div class="digit-group">
-            <input
-              v-if="timerState === 'idle'"
-              class="digit-input"
-              :class="{ invalid: minutesInvalid }"
-              type="number"
-              min="0"
-              max="59"
-              :value="inputMinutes"
-              @input="onMinutesInput"
-              @blur="clampMinutes"
-              @focus="$event.target.select()"
-              placeholder="00"
-              aria-label="Minutes"
-            >
-            <span
-              v-else
-              class="digit-value"
-              :class="{ animate: timerState === 'running' }"
-              :key="displayMinutes"
-            >{{ displayMinutes }}</span>
-            <span class="digit-label">Minutes</span>
-          </div>
-
-          <span class="timer-sep">:</span>
-
-          <!-- Seconds -->
-          <div class="digit-group">
-            <input
-              v-if="timerState === 'idle'"
-              class="digit-input"
-              :class="{ invalid: secondsInvalid }"
-              type="number"
-              min="0"
-              max="59"
-              :value="inputSeconds"
-              @input="onSecondsInput"
-              @blur="clampSeconds"
-              @focus="$event.target.select()"
-              placeholder="00"
-              aria-label="Seconds"
-            >
-            <span
-              v-else
-              class="digit-value"
-              :class="{ animate: timerState === 'running' }"
-              :key="displaySeconds"
-            >{{ displaySeconds }}</span>
-            <span class="digit-label">Seconds</span>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- Controls -->
-      <div class="controls">
-        <button
-          v-if="timerState === 'idle'"
-          class="btn"
-          @click="startTimer"
-          :disabled="totalInputSeconds <= 0"
-        >Start</button>
-
-        <button
-          v-if="timerState === 'running' || timerState === 'paused'"
-          class="btn"
-          @click="timerState === 'running' ? pauseTimer() : resumeTimer()"
-        >{{ timerState === 'paused' ? 'Resume' : 'Pause' }}</button>
-
-        <button
-          v-if="timerState !== 'idle'"
-          class="btn"
-          @click="resetTimer"
-        >Reset</button>
-      </div>
-
-      <!-- Footer -->
-      <footer class="page-footer">
-        Made with &#10084;&#65039; and &#129302; for the Cursor global community
-      </footer>
-
-      <!-- Screen reader announcements (state changes only) -->
-      <div aria-live="assertive" aria-atomic="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">{{ ariaAnnouncement }}</div>
-
-    </main>
-
-    <!-- Completion Modal -->
-    <div
-      v-if="showModal"
-      class="modal-overlay"
-      @click.self="closeModal"
-      @keydown.escape="closeModal"
-    >
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <h2 id="modal-title" class="modal-title">Time's Up</h2>
-        <p class="modal-subtitle">The countdown has finished.</p>
-        <button ref="closeBtn" class="btn" @click="closeModal">Close</button>
-      </div>
-    </div>
-
-  </div>
-
-  <script src="https://unpkg.com/vue@3.5.30/dist/vue.global.prod.js" integrity="sha384-vCgvGgU4V24AR6BHDZDH2f+muEekzRVoiu4vtvCdSR6z1N61Z1rTC9lKdgZIVk6P" crossorigin="anonymous"> </script>
-  <script>
-    const { createApp, ref, computed, watch, nextTick, onMounted, onUnmounted } = Vue;
-
-    createApp({
-      setup() {
-        // ── Theme ──
-        const theme = ref(localStorage.getItem('cursor-countdown-theme') || 'dark');
-
-        function setTheme(t) {
-          theme.value = t;
-          document.documentElement.setAttribute('data-theme', t);
-          localStorage.setItem('cursor-countdown-theme', t);
-        }
-
-        // Apply saved theme on load
-        setTheme(theme.value);
-
-        // ── Event info ──
-        const eventName = ref('Event Name');
-        const eventDate = ref('');
-        const isEditingName = ref(false);
-        const nameInput = ref(null);
-        const dateInput = ref(null);
-
-        function startEditingName() {
-          isEditingName.value = true;
-          nextTick(() => {
-            nameInput.value?.focus();
-            nameInput.value?.select();
-          });
-        }
-
-        function confirmName() {
-          if (!eventName.value.trim()) eventName.value = 'Event Name';
-          isEditingName.value = false;
-        }
-
-        function openDatePicker() {
-          const el = dateInput.value;
-          if (!el) return;
-          try { el.showPicker(); } catch (e) { el.click(); }
-        }
-
-        const formattedDate = computed(() => {
-          if (!eventDate.value) return 'Select date';
-          const d = new Date(eventDate.value + 'T00:00:00');
-          return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-        });
-
-        // ── Timer inputs ──
-        const inputHours = ref(0);
-        const inputMinutes = ref(0);
-        const inputSeconds = ref(0);
-        const hoursInvalid = ref(false);
-        const minutesInvalid = ref(false);
-        const secondsInvalid = ref(false);
-
-        function onHoursInput(e) {
-          const v = parseInt(e.target.value);
-          if (isNaN(v)) { inputHours.value = 0; return; }
-          inputHours.value = v;
-          hoursInvalid.value = v < 0 || v > 99;
-        }
-
-        function onMinutesInput(e) {
-          const v = parseInt(e.target.value);
-          if (isNaN(v)) { inputMinutes.value = 0; return; }
-          inputMinutes.value = v;
-          minutesInvalid.value = v < 0 || v > 59;
-        }
-
-        function onSecondsInput(e) {
-          const v = parseInt(e.target.value);
-          if (isNaN(v)) { inputSeconds.value = 0; return; }
-          inputSeconds.value = v;
-          secondsInvalid.value = v < 0 || v > 59;
-        }
-
-        function clampHours() {
-          inputHours.value = Math.max(0, Math.min(99, inputHours.value || 0));
-          hoursInvalid.value = false;
-        }
-
-        function clampMinutes() {
-          inputMinutes.value = Math.max(0, Math.min(59, inputMinutes.value || 0));
-          minutesInvalid.value = false;
-        }
-
-        function clampSeconds() {
-          inputSeconds.value = Math.max(0, Math.min(59, inputSeconds.value || 0));
-          secondsInvalid.value = false;
-        }
-
-        const totalInputSeconds = computed(() =>
-          (inputHours.value || 0) * 3600 + (inputMinutes.value || 0) * 60 + (inputSeconds.value || 0)
-        );
-
-        // ── Timer state ──
-        const remainingSeconds = ref(0);
-        const timerState = ref('idle');
-        const showModal = ref(false);
-        let intervalId = null;
-
-        // ── Display values ──
-        const displayHours = computed(() =>
-          String(Math.floor(remainingSeconds.value / 3600)).padStart(2, '0')
-        );
-        const displayMinutes = computed(() =>
-          String(Math.floor((remainingSeconds.value % 3600) / 60)).padStart(2, '0')
-        );
-        const displaySeconds = computed(() =>
-          String(remainingSeconds.value % 60).padStart(2, '0')
-        );
-
-        // ── Accessibility: aria-label from inputs when idle, from remaining when running ──
-        const timerAriaLabel = computed(() => {
-          if (timerState.value === 'idle') {
-            const h = inputHours.value || 0;
-            const m = inputMinutes.value || 0;
-            const s = inputSeconds.value || 0;
-            return 'Timer set to: ' + h + ' hours ' + m + ' minutes ' + s + ' seconds';
-          }
-          return 'Timer: ' + displayHours.value + ' hours ' + displayMinutes.value + ' minutes ' + displaySeconds.value + ' seconds';
-        });
-
-        // Only announce on state changes, not every tick
-        const ariaAnnouncement = ref('');
-
-        function announce(msg) {
-          ariaAnnouncement.value = '';
-          nextTick(() => { ariaAnnouncement.value = msg; });
-        }
-
-        // ── Timer logic ──
-        function tick() {
-          if (remainingSeconds.value <= 1) {
-            remainingSeconds.value = 0;
-            stopInterval();
-            timerState.value = 'idle';
-            showModal.value = true;
-            announce("Time's up. The countdown has finished.");
-            return;
-          }
-          remainingSeconds.value--;
-        }
-
-        function startInterval() {
-          stopInterval();
-          intervalId = setInterval(tick, 1000);
-        }
-
-        function stopInterval() {
-          if (intervalId !== null) {
-            clearInterval(intervalId);
-            intervalId = null;
-          }
-        }
-
-        function startTimer() {
-          clampHours();
-          clampMinutes();
-          clampSeconds();
-          const total = inputHours.value * 3600 + inputMinutes.value * 60 + inputSeconds.value;
-          if (total <= 0) return;
-          remainingSeconds.value = total;
-          timerState.value = 'running';
-          startInterval();
-          announce('Timer started: ' + displayHours.value + ' hours ' + displayMinutes.value + ' minutes ' + displaySeconds.value + ' seconds');
-        }
-
-        function pauseTimer() {
-          timerState.value = 'paused';
-          stopInterval();
-          announce('Timer paused at ' + displayHours.value + ':' + displayMinutes.value + ':' + displaySeconds.value);
-        }
-
-        function resumeTimer() {
-          timerState.value = 'running';
-          startInterval();
-          announce('Timer resumed');
-        }
-
-        function resetTimer() {
-          stopInterval();
-          timerState.value = 'idle';
-          remainingSeconds.value = 0;
-          announce('Timer reset');
-        }
-
-        // ── Modal ──
-        const closeBtn = ref(null);
-
-        function closeModal() {
-          showModal.value = false;
-        }
-
-        // Focus close button when modal opens
-        watch(showModal, async (val) => {
-          if (val) {
-            await nextTick();
-            closeBtn.value?.focus();
-          }
-        });
-
-        // Global keyboard handler
-        function onKeydown(e) {
-          if (e.key === 'Escape' && showModal.value) {
-            closeModal();
-          }
-          // Trap focus in modal
-          if (showModal.value && e.key === 'Tab') {
-            e.preventDefault();
-            closeBtn.value?.focus();
-          }
-        }
-
-        onMounted(() => {
-          document.addEventListener('keydown', onKeydown);
-        });
-
-        onUnmounted(() => {
-          document.removeEventListener('keydown', onKeydown);
-          stopInterval();
-        });
-
-        return {
-          theme, setTheme,
-          eventName, eventDate, isEditingName,
-          nameInput, dateInput,
-          startEditingName, confirmName, openDatePicker,
-          formattedDate,
-          inputHours, inputMinutes, inputSeconds,
-          hoursInvalid, minutesInvalid, secondsInvalid,
-          onHoursInput, onMinutesInput, onSecondsInput,
-          clampHours, clampMinutes, clampSeconds,
-          totalInputSeconds,
-          remainingSeconds, timerState, showModal,
-          displayHours, displayMinutes, displaySeconds,
-          timerAriaLabel, ariaAnnouncement,
-          startTimer, pauseTimer, resumeTimer, resetTimer,
-          closeModal, closeBtn,
-        };
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cursor Countdown</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-    }).mount('#app');
-  </script>
-</body>
+      [v-cloak] {
+        display: none;
+      }
+
+      /* ── Dark theme (default) ── */
+      [data-theme="dark"] {
+        --bg-primary: #0a0a0a;
+        --bg-surface: #141414;
+        --bg-elevated: #1a1a1a;
+        --text-primary: #ffffff;
+        --text-secondary: #888888;
+        --text-tertiary: #555555;
+        --border-color: rgba(255, 255, 255, 0.08);
+        --border-hover: rgba(255, 255, 255, 0.15);
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-blur: 20px;
+      }
+
+      /* ── Light theme ── */
+      [data-theme="light"] {
+        --bg-primary: #ffffff;
+        --bg-surface: #f7f7f7;
+        --bg-elevated: #eeeeee;
+        --text-primary: #0a0a0a;
+        --text-secondary: #666666;
+        --text-tertiary: #999999;
+        --border-color: rgba(0, 0, 0, 0.08);
+        --border-hover: rgba(0, 0, 0, 0.15);
+        --glass-bg: rgba(0, 0, 0, 0.02);
+        --glass-border: rgba(0, 0, 0, 0.08);
+        --glass-blur: 20px;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition:
+          background-color 0.3s ease,
+          color 0.3s ease;
+      }
+
+      /* ── Theme toggle (pill, top-right) ── */
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 22px;
+        padding: 3px;
+        transition:
+          background-color 0.3s ease,
+          border-color 0.3s ease;
+      }
+
+      .toggle-opt {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 18px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-tertiary);
+        transition: all 0.2s ease;
+      }
+
+      .toggle-opt.active {
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+      }
+
+      .toggle-opt:focus-visible {
+        outline: 2px solid var(--text-secondary);
+        outline-offset: 1px;
+      }
+
+      .toggle-opt svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* ── Main container ── */
+      .page-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 600px;
+        padding: 0 24px;
+      }
+
+      /* ── Hero / Logo ── */
+      .hero {
+        padding: 64px 0 48px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .logo-dark,
+      .logo-light {
+        width: 240px;
+        height: auto;
+      }
+      [data-theme="dark"] .logo-light,
+      [data-theme="light"] .logo-dark {
+        display: none;
+      }
+      [data-theme="dark"] .logo-dark,
+      [data-theme="light"] .logo-light {
+        display: block;
+      }
+
+      /* ── Event info ── */
+      .event-info {
+        text-align: center;
+        margin-bottom: 32px;
+        width: 100%;
+      }
+
+      .event-name-display {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        background: none;
+        border: 0;
+        padding: 0;
+        font: inherit;
+        color: inherit;
+      }
+
+      .event-name-display:hover .edit-icon,
+      .event-name-display:focus-visible .edit-icon {
+        opacity: 1;
+      }
+
+      .event-name-text {
+        font-size: 1.75rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+      }
+
+      .edit-icon,
+      .cal-icon {
+        width: 16px;
+        height: 16px;
+        color: var(--text-tertiary);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        flex-shrink: 0;
+      }
+
+      .event-name-input {
+        font-family: "Inter", sans-serif;
+        font-size: 1.75rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid var(--border-hover);
+        outline: none;
+        text-align: center;
+        padding: 2px 0;
+        width: 100%;
+        max-width: 400px;
+        transition: border-color 0.2s ease;
+      }
+
+      .event-name-input:focus {
+        border-bottom-color: var(--text-secondary);
+      }
+
+      .event-date-row {
+        margin-top: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        position: relative;
+        background: none;
+        border: 0;
+        padding: 0;
+        font: inherit;
+        color: inherit;
+      }
+
+      .event-date-row:hover .cal-icon,
+      .event-date-row:focus-visible .cal-icon {
+        opacity: 1;
+      }
+
+      .event-date-text {
+        font-size: 1rem;
+        font-weight: 400;
+        color: var(--text-secondary);
+        transition: color 0.2s ease;
+      }
+
+      .event-date-row:hover .event-date-text {
+        color: var(--text-primary);
+      }
+
+      .date-input-hidden {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+
+      .event-date-native {
+        font-family: "Inter", sans-serif;
+        font-size: 1rem;
+        font-weight: 400;
+        color: var(--text-secondary);
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid var(--border-hover);
+        outline: none;
+        text-align: center;
+        padding: 2px 0;
+        color-scheme: dark;
+      }
+
+      [data-theme="light"] .event-date-native {
+        color-scheme: light;
+      }
+
+      /* ── Countdown card (glassmorphism) ── */
+      .countdown-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(var(--glass-blur));
+        -webkit-backdrop-filter: blur(var(--glass-blur));
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 48px 40px;
+        width: 100%;
+        transition:
+          background-color 0.3s ease,
+          border-color 0.3s ease;
+      }
+
+      /* ── Timer display ── */
+      .timer-display {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+      }
+
+      .digit-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .digit-value {
+        font-size: clamp(2.5rem, 8vw, 5rem);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+        display: inline-block;
+      }
+
+      .digit-value.animate {
+        animation: digit-fade 400ms ease-in-out;
+      }
+
+      @keyframes digit-fade {
+        0% {
+          opacity: 0.4;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .digit-label {
+        font-size: 0.7rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-secondary);
+      }
+
+      .timer-sep {
+        font-size: clamp(2rem, 6vw, 4rem);
+        font-weight: 300;
+        color: var(--text-secondary);
+        line-height: 1;
+        padding: 0 12px;
+        user-select: none;
+      }
+
+      /* ── Timer inputs ── */
+      .digit-input {
+        font-family: "Inter", sans-serif;
+        font-size: clamp(2.5rem, 8vw, 5rem);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid var(--border-color);
+        outline: none;
+        width: 2.6ch;
+        text-align: center;
+        padding: 0;
+        transition: border-color 0.2s ease;
+        -moz-appearance: textfield;
+      }
+
+      .digit-input::-webkit-outer-spin-button,
+      .digit-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .digit-input:focus {
+        border-bottom-color: var(--text-secondary);
+      }
+      .digit-input::placeholder {
+        color: var(--text-tertiary);
+      }
+
+      .digit-input.invalid {
+        border-bottom-color: #994444;
+        animation: shake 0.3s ease;
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-3px);
+        }
+        75% {
+          transform: translateX(3px);
+        }
+      }
+
+      /* ── Controls ── */
+      .controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .btn {
+        font-family: "Inter", sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 12px 24px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: transparent;
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+        min-height: 44px;
+      }
+
+      .btn:hover:not(:disabled) {
+        background: var(--bg-elevated);
+        border-color: var(--border-hover);
+      }
+
+      .btn:active:not(:disabled) {
+        transform: scale(0.97);
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid var(--text-secondary);
+        outline-offset: 2px;
+      }
+
+      .btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      /* ── Footer ── */
+      .page-footer {
+        padding: 48px 0 24px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+      }
+
+      /* ── Modal ── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        animation: fade-in 0.3s ease;
+      }
+
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .modal-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(var(--glass-blur));
+        -webkit-backdrop-filter: blur(var(--glass-blur));
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 36px 40px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        animation: modal-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes modal-enter {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .modal-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+      }
+
+      .modal-subtitle {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin-bottom: 28px;
+        line-height: 1.5;
+      }
+
+      /* ── Responsive ── */
+      @media (max-width: 520px) {
+        .countdown-card {
+          padding: 32px 20px;
+        }
+        .timer-sep {
+          padding: 0 6px;
+        }
+        .controls {
+          flex-wrap: wrap;
+        }
+        .hero {
+          padding: 48px 0 32px;
+        }
+        .logo-dark,
+        .logo-light {
+          width: 180px;
+        }
+        .event-name-text {
+          font-size: 1.35rem;
+        }
+        .modal-card {
+          padding: 28px 24px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .digit-input {
+          width: 2.2ch;
+        }
+        .timer-sep {
+          padding: 0 4px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" v-cloak>
+      <!-- Theme Toggle -->
+      <div class="theme-toggle" role="radiogroup" aria-label="Theme toggle">
+        <button
+          class="toggle-opt"
+          :class="{ active: theme === 'light' }"
+          @click="setTheme('light')"
+          :aria-checked="theme === 'light'"
+          aria-label="Light mode"
+          role="radio"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        </button>
+        <button
+          class="toggle-opt"
+          :class="{ active: theme === 'dark' }"
+          @click="setTheme('dark')"
+          :aria-checked="theme === 'dark'"
+          aria-label="Dark mode"
+          role="radio"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+      </div>
+
+      <main class="page-main">
+        <!-- Hero / Logo -->
+        <header class="hero">
+          <!-- Dark-theme logo (light fills for dark backgrounds) -->
+          <svg
+            class="logo-dark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1655.29 900.89"
+            aria-label="Cursor"
+          >
+            <g>
+              <path
+                fill="#72716d"
+                d="M827.64,266.66l231.16,133.46c-1.42,2.46-3.48,4.56-6.03,6.03l-216.06,124.74c-5.61,3.24-12.53,3.24-18.14,0l-216.05-124.74c-2.55-1.47-4.61-3.57-6.03-6.03l231.16-133.46h-.01Z"
+              />
+              <path
+                fill="#55544f"
+                d="M827.64,0v266.66l-231.16,133.46c-1.42-2.46-2.21-5.3-2.21-8.24v-250.44c0-5.89,3.14-11.32,8.24-14.27L818.57,2.43c2.81-1.62,5.94-2.43,9.07-2.43Z"
+              />
+              <path
+                fill="#43413c"
+                d="M1058.8,133.2c-1.42-2.46-3.48-4.56-6.03-6.03L836.71,2.43c-2.8-1.62-5.94-2.43-9.07-2.43v266.66l231.16,133.46c1.42-2.46,2.21-5.3,2.21-8.24v-250.44c0-2.95-.78-5.77-2.21-8.24Z"
+              />
+              <path
+                fill="#d6d5d2"
+                d="M1042.63,142.54c1.31,2.26,1.49,5.16,0,7.74l-209.83,363.42c-1.41,2.46-5.16,1.45-5.16-1.38v-239.48c0-1.91-.51-3.75-1.44-5.36l216.42-124.95h.01Z"
+              />
+              <path
+                fill="#fff"
+                d="M1042.63,142.54l-216.42,124.95c-.92-1.6-2.26-2.96-3.92-3.92l-207.39-119.74c-2.46-1.41-1.45-5.16,1.38-5.16h419.65c2.98,0,5.4,1.61,6.7,3.87h0Z"
+              />
+            </g>
+            <g>
+              <path
+                fill="#edecec"
+                d="M139.03,626.67h90.64v49.93h-87.57c-47.24,0-84.11,27.27-84.11,84.88s36.87,84.88,84.11,84.88h87.57v49.93h-94.48C56.07,896.29,0,849.81,0,761.47s59.91-134.8,139.03-134.8Z"
+              />
+              <path
+                fill="#edecec"
+                d="M275.75,626.67h56.07v164.76c0,41.09,18.82,60.3,62.99,60.3s62.99-19.2,62.99-60.3v-164.76h56.07v176.28c0,59.91-38.02,97.94-119.06,97.94s-119.06-38.41-119.06-98.32v-175.9h0Z"
+              />
+              <path
+                fill="#edecec"
+                d="M806.9,703.1c0,29.96-17.28,53-40.33,62.99v.77c24.2,3.46,36.49,20.74,36.87,44.17l1.15,85.26h-56.07l-1.15-76.04c-.38-16.9-10.37-27.27-30.34-27.27h-93.33v103.31h-56.07v-269.61h154.78c50.7,0,84.49,25.73,84.49,76.43h0ZM750.45,710.78c0-23.04-12.29-35.72-35.33-35.72h-91.41v71.43h92.17c21.12,0,34.57-12.67,34.57-35.72h0Z"
+              />
+              <path
+                fill="#edecec"
+                d="M1018.9,817.55c0-19.2-12.29-27.27-30.72-28.8l-62.22-5.76c-53.77-4.99-81.81-26.12-81.81-77.2s34.57-79.12,84.11-79.12h137.49v48.39h-133.65c-19.2,0-31.49,9.99-31.49,29.19s12.67,28.42,31.88,29.96l63.37,5.38c48.01,4.22,79.5,26.12,79.5,77.58s-33.41,79.12-80.65,79.12h-143.64v-48.39h138.26c18.05,0,29.57-12.29,29.57-30.34h0Z"
+              />
+              <path
+                fill="#edecec"
+                d="M1239.35,622.06c84.49,0,137.88,54.15,137.88,139.03s-55.69,139.8-140.18,139.8-137.88-54.92-137.88-139.8,55.69-139.03,140.18-139.03h0ZM1319.24,761.47c0-56.84-33.03-90.25-81.04-90.25s-81.04,33.41-81.04,90.25,33.03,90.25,81.04,90.25,81.04-33.41,81.04-90.25Z"
+              />
+              <path
+                fill="#edecec"
+                d="M1655.29,703.1c0,29.96-17.28,53-40.33,62.99v.77c24.2,3.46,36.49,20.74,36.87,44.17l1.15,85.26h-56.07l-1.15-76.04c-.38-16.9-10.37-27.27-30.34-27.27h-93.33v103.31h-56.07v-269.61h154.78c50.7,0,84.49,25.73,84.49,76.43h0ZM1598.83,710.78c0-23.04-12.29-35.72-35.33-35.72h-91.41v71.43h92.17c21.12,0,34.57-12.67,34.57-35.72h0Z"
+              />
+            </g>
+          </svg>
+
+          <!-- Light-theme logo (dark fills for light backgrounds) -->
+          <svg
+            class="logo-light"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1655.29 900.89"
+            aria-label="Cursor"
+          >
+            <g>
+              <path
+                fill="#72716d"
+                d="M827.64,266.66l231.16,133.46c-1.42,2.46-3.48,4.56-6.03,6.03l-216.06,124.74c-5.61,3.24-12.53,3.24-18.14,0l-216.05-124.74c-2.55-1.47-4.61-3.57-6.03-6.03l231.16-133.46h-.01Z"
+              />
+              <path
+                fill="#55544f"
+                d="M827.64,0v266.66l-231.16,133.46c-1.42-2.46-2.21-5.3-2.21-8.24v-250.44c0-5.89,3.14-11.32,8.24-14.27L818.57,2.43c2.81-1.62,5.94-2.43,9.07-2.43Z"
+              />
+              <path
+                fill="#43413c"
+                d="M1058.8,133.2c-1.42-2.46-3.48-4.56-6.03-6.03L836.71,2.43c-2.8-1.62-5.94-2.43-9.07-2.43v266.66l231.16,133.46c1.42-2.46,2.21-5.3,2.21-8.24v-250.44c0-2.95-.78-5.77-2.21-8.24Z"
+              />
+              <path
+                fill="#d6d5d2"
+                d="M1042.63,142.54c1.31,2.26,1.49,5.16,0,7.74l-209.83,363.42c-1.41,2.46-5.16,1.45-5.16-1.38v-239.48c0-1.91-.51-3.75-1.44-5.36l216.42-124.95h.01Z"
+              />
+              <path
+                fill="#fff"
+                d="M1042.63,142.54l-216.42,124.95c-.92-1.6-2.26-2.96-3.92-3.92l-207.39-119.74c-2.46-1.41-1.45-5.16,1.38-5.16h419.65c2.98,0,5.4,1.61,6.7,3.87h0Z"
+              />
+            </g>
+            <g>
+              <path
+                fill="#26251e"
+                d="M139.03,626.67h90.64v49.93h-87.57c-47.24,0-84.11,27.27-84.11,84.88s36.87,84.88,84.11,84.88h87.57v49.93h-94.48C56.07,896.29,0,849.81,0,761.47s59.91-134.8,139.03-134.8Z"
+              />
+              <path
+                fill="#26251e"
+                d="M275.75,626.67h56.07v164.76c0,41.09,18.82,60.3,62.99,60.3s62.99-19.2,62.99-60.3v-164.76h56.07v176.28c0,59.91-38.02,97.94-119.06,97.94s-119.06-38.41-119.06-98.32v-175.9h0Z"
+              />
+              <path
+                fill="#26251e"
+                d="M806.9,703.1c0,29.96-17.28,53-40.33,62.99v.77c24.2,3.46,36.49,20.74,36.87,44.17l1.15,85.26h-56.07l-1.15-76.04c-.38-16.9-10.37-27.27-30.34-27.27h-93.33v103.31h-56.07v-269.61h154.78c50.7,0,84.49,25.73,84.49,76.43h0ZM750.45,710.78c0-23.04-12.29-35.72-35.33-35.72h-91.41v71.43h92.17c21.12,0,34.57-12.67,34.57-35.72h0Z"
+              />
+              <path
+                fill="#26251e"
+                d="M1018.9,817.55c0-19.2-12.29-27.27-30.72-28.8l-62.22-5.76c-53.77-4.99-81.81-26.12-81.81-77.2s34.57-79.12,84.11-79.12h137.49v48.39h-133.65c-19.2,0-31.49,9.99-31.49,29.19s12.67,28.42,31.88,29.96l63.37,5.38c48.01,4.22,79.5,26.12,79.5,77.58s-33.41,79.12-80.65,79.12h-143.64v-48.39h138.26c18.05,0,29.57-12.29,29.57-30.34h0Z"
+              />
+              <path
+                fill="#26251e"
+                d="M1239.35,622.06c84.49,0,137.88,54.15,137.88,139.03s-55.69,139.8-140.18,139.8-137.88-54.92-137.88-139.8,55.69-139.03,140.18-139.03h0ZM1319.24,761.47c0-56.84-33.03-90.25-81.04-90.25s-81.04,33.41-81.04,90.25,33.03,90.25,81.04,90.25,81.04-33.41,81.04-90.25Z"
+              />
+              <path
+                fill="#26251e"
+                d="M1655.29,703.1c0,29.96-17.28,53-40.33,62.99v.77c24.2,3.46,36.49,20.74,36.87,44.17l1.15,85.26h-56.07l-1.15-76.04c-.38-16.9-10.37-27.27-30.34-27.27h-93.33v103.31h-56.07v-269.61h154.78c50.7,0,84.49,25.73,84.49,76.43h0ZM1598.83,710.78c0-23.04-12.29-35.72-35.33-35.72h-91.41v71.43h92.17c21.12,0,34.57-12.67,34.57-35.72h0Z"
+              />
+            </g>
+          </svg>
+        </header>
+
+        <!-- Event Info (inline editable) -->
+        <section class="event-info">
+          <!-- Event Name -->
+          <button
+            v-if="!isEditingName"
+            type="button"
+            class="event-name-display"
+            @click="startEditingName"
+            aria-label="Edit event name"
+          >
+            <h1 class="event-name-text">{{ eventName }}</h1>
+            <svg
+              class="edit-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
+              />
+            </svg>
+          </button>
+          <input
+            v-else
+            ref="nameInput"
+            class="event-name-input"
+            type="text"
+            v-model="eventName"
+            @keydown.enter="confirmName"
+            @blur="confirmName"
+            spellcheck="false"
+          />
+
+          <!-- Event Date -->
+          <button
+            type="button"
+            class="event-date-row"
+            @click="openDatePicker"
+            aria-label="Select event date"
+          >
+            <svg
+              class="cal-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <span class="event-date-text">{{ formattedDate }}</span>
+          </button>
+          <input
+            ref="dateInput"
+            class="date-input-hidden"
+            type="date"
+            v-model="eventDate"
+            tabindex="-1"
+          />
+        </section>
+
+        <!-- Countdown Timer Card -->
+        <section class="countdown-card">
+          <div class="timer-display" :aria-label="timerAriaLabel" role="timer">
+            <!-- Hours -->
+            <div class="digit-group">
+              <input
+                v-if="timerState === 'idle'"
+                class="digit-input"
+                :class="{ invalid: hoursInvalid }"
+                type="number"
+                min="0"
+                max="99"
+                :value="inputHours"
+                @input="onHoursInput"
+                @blur="clampHours"
+                @focus="$event.target.select()"
+                placeholder="00"
+                aria-label="Hours"
+              />
+              <span
+                v-else
+                class="digit-value"
+                :class="{ animate: timerState === 'running' }"
+                :key="displayHours"
+                >{{ displayHours }}</span
+              >
+              <span class="digit-label">Hours</span>
+            </div>
+
+            <span class="timer-sep">:</span>
+
+            <!-- Minutes -->
+            <div class="digit-group">
+              <input
+                v-if="timerState === 'idle'"
+                class="digit-input"
+                :class="{ invalid: minutesInvalid }"
+                type="number"
+                min="0"
+                max="59"
+                :value="inputMinutes"
+                @input="onMinutesInput"
+                @blur="clampMinutes"
+                @focus="$event.target.select()"
+                placeholder="00"
+                aria-label="Minutes"
+              />
+              <span
+                v-else
+                class="digit-value"
+                :class="{ animate: timerState === 'running' }"
+                :key="displayMinutes"
+                >{{ displayMinutes }}</span
+              >
+              <span class="digit-label">Minutes</span>
+            </div>
+
+            <span class="timer-sep">:</span>
+
+            <!-- Seconds -->
+            <div class="digit-group">
+              <input
+                v-if="timerState === 'idle'"
+                class="digit-input"
+                :class="{ invalid: secondsInvalid }"
+                type="number"
+                min="0"
+                max="59"
+                :value="inputSeconds"
+                @input="onSecondsInput"
+                @blur="clampSeconds"
+                @focus="$event.target.select()"
+                placeholder="00"
+                aria-label="Seconds"
+              />
+              <span
+                v-else
+                class="digit-value"
+                :class="{ animate: timerState === 'running' }"
+                :key="displaySeconds"
+                >{{ displaySeconds }}</span
+              >
+              <span class="digit-label">Seconds</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Controls -->
+        <div class="controls">
+          <button
+            v-if="timerState === 'idle'"
+            class="btn"
+            @click="startTimer"
+            :disabled="totalInputSeconds <= 0"
+          >
+            Start
+          </button>
+
+          <button
+            v-if="timerState === 'running' || timerState === 'paused'"
+            class="btn"
+            @click="timerState === 'running' ? pauseTimer() : resumeTimer()"
+          >
+            {{ timerState === 'paused' ? 'Resume' : 'Pause' }}
+          </button>
+
+          <button v-if="timerState !== 'idle'" class="btn" @click="resetTimer">
+            Reset
+          </button>
+        </div>
+
+        <!-- Footer -->
+        <footer class="page-footer">
+          Made with &#10084;&#65039; and &#129302; for the Cursor global
+          community
+        </footer>
+
+        <!-- Screen reader announcements (state changes only) -->
+        <div
+          aria-live="assertive"
+          aria-atomic="true"
+          style="
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+          "
+        >
+          {{ ariaAnnouncement }}
+        </div>
+      </main>
+
+      <!-- Completion Modal -->
+      <div
+        v-if="showModal"
+        class="modal-overlay"
+        @click.self="closeModal"
+        @keydown.escape="closeModal"
+      >
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
+          <h2 id="modal-title" class="modal-title">Time's Up</h2>
+          <p class="modal-subtitle">The countdown has finished.</p>
+          <button ref="closeBtn" class="btn" @click="closeModal">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="https://unpkg.com/vue@3.5.30/dist/vue.global.prod.js"
+      integrity="sha384-vCgvGgU4V24AR6BHDZDH2f+muEekzRVoiu4vtvCdSR6z1N61Z1rTC9lKdgZIVk6P"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      const {
+        createApp,
+        ref,
+        computed,
+        watch,
+        nextTick,
+        onMounted,
+        onUnmounted,
+      } = Vue;
+
+      createApp({
+        setup() {
+          // ── Theme ──
+          const theme = ref(
+            localStorage.getItem("cursor-countdown-theme") || "dark",
+          );
+
+          function setTheme(t) {
+            theme.value = t;
+            document.documentElement.setAttribute("data-theme", t);
+            localStorage.setItem("cursor-countdown-theme", t);
+          }
+
+          // Apply saved theme on load
+          setTheme(theme.value);
+
+          // ── Event info ──
+          const eventName = ref("Event Name");
+          const eventDate = ref("");
+          const isEditingName = ref(false);
+          const nameInput = ref(null);
+          const dateInput = ref(null);
+
+          function startEditingName() {
+            isEditingName.value = true;
+            nextTick(() => {
+              nameInput.value?.focus();
+              nameInput.value?.select();
+            });
+          }
+
+          function confirmName() {
+            if (!eventName.value.trim()) eventName.value = "Event Name";
+            isEditingName.value = false;
+          }
+
+          function openDatePicker() {
+            const el = dateInput.value;
+            if (!el) return;
+            try {
+              el.showPicker();
+            } catch (e) {
+              el.click();
+            }
+          }
+
+          const formattedDate = computed(() => {
+            if (!eventDate.value) return "Select date";
+            const d = new Date(eventDate.value + "T00:00:00");
+            return d.toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            });
+          });
+
+          // ── Timer inputs ──
+          const inputHours = ref(0);
+          const inputMinutes = ref(0);
+          const inputSeconds = ref(0);
+          const hoursInvalid = ref(false);
+          const minutesInvalid = ref(false);
+          const secondsInvalid = ref(false);
+
+          function onHoursInput(e) {
+            const v = parseInt(e.target.value);
+            if (isNaN(v)) {
+              inputHours.value = 0;
+              return;
+            }
+            inputHours.value = v;
+            hoursInvalid.value = v < 0 || v > 99;
+          }
+
+          function onMinutesInput(e) {
+            const v = parseInt(e.target.value);
+            if (isNaN(v)) {
+              inputMinutes.value = 0;
+              return;
+            }
+            inputMinutes.value = v;
+            minutesInvalid.value = v < 0 || v > 59;
+          }
+
+          function onSecondsInput(e) {
+            const v = parseInt(e.target.value);
+            if (isNaN(v)) {
+              inputSeconds.value = 0;
+              return;
+            }
+            inputSeconds.value = v;
+            secondsInvalid.value = v < 0 || v > 59;
+          }
+
+          function clampHours() {
+            inputHours.value = Math.max(0, Math.min(99, inputHours.value || 0));
+            hoursInvalid.value = false;
+          }
+
+          function clampMinutes() {
+            inputMinutes.value = Math.max(
+              0,
+              Math.min(59, inputMinutes.value || 0),
+            );
+            minutesInvalid.value = false;
+          }
+
+          function clampSeconds() {
+            inputSeconds.value = Math.max(
+              0,
+              Math.min(59, inputSeconds.value || 0),
+            );
+            secondsInvalid.value = false;
+          }
+
+          const totalInputSeconds = computed(
+            () =>
+              (inputHours.value || 0) * 3600 +
+              (inputMinutes.value || 0) * 60 +
+              (inputSeconds.value || 0),
+          );
+
+          // ── Timer state ──
+          const remainingSeconds = ref(0);
+          const timerState = ref("idle");
+          const showModal = ref(false);
+          let intervalId = null;
+
+          // ── Display values ──
+          const displayHours = computed(() =>
+            String(Math.floor(remainingSeconds.value / 3600)).padStart(2, "0"),
+          );
+          const displayMinutes = computed(() =>
+            String(Math.floor((remainingSeconds.value % 3600) / 60)).padStart(
+              2,
+              "0",
+            ),
+          );
+          const displaySeconds = computed(() =>
+            String(remainingSeconds.value % 60).padStart(2, "0"),
+          );
+
+          // ── Accessibility: aria-label from inputs when idle, from remaining when running ──
+          const timerAriaLabel = computed(() => {
+            if (timerState.value === "idle") {
+              const h = inputHours.value || 0;
+              const m = inputMinutes.value || 0;
+              const s = inputSeconds.value || 0;
+              return (
+                "Timer set to: " +
+                h +
+                " hours " +
+                m +
+                " minutes " +
+                s +
+                " seconds"
+              );
+            }
+            return (
+              "Timer: " +
+              displayHours.value +
+              " hours " +
+              displayMinutes.value +
+              " minutes " +
+              displaySeconds.value +
+              " seconds"
+            );
+          });
+
+          // Only announce on state changes, not every tick
+          const ariaAnnouncement = ref("");
+
+          function announce(msg) {
+            ariaAnnouncement.value = "";
+            nextTick(() => {
+              ariaAnnouncement.value = msg;
+            });
+          }
+
+          // ── Timer logic ──
+          function tick() {
+            if (remainingSeconds.value <= 1) {
+              remainingSeconds.value = 0;
+              stopInterval();
+              timerState.value = "idle";
+              showModal.value = true;
+              announce("Time's up. The countdown has finished.");
+              return;
+            }
+            remainingSeconds.value--;
+          }
+
+          function startInterval() {
+            stopInterval();
+            intervalId = setInterval(tick, 1000);
+          }
+
+          function stopInterval() {
+            if (intervalId !== null) {
+              clearInterval(intervalId);
+              intervalId = null;
+            }
+          }
+
+          function startTimer() {
+            clampHours();
+            clampMinutes();
+            clampSeconds();
+            const total =
+              inputHours.value * 3600 +
+              inputMinutes.value * 60 +
+              inputSeconds.value;
+            if (total <= 0) return;
+            remainingSeconds.value = total;
+            timerState.value = "running";
+            startInterval();
+            announce(
+              "Timer started: " +
+                displayHours.value +
+                " hours " +
+                displayMinutes.value +
+                " minutes " +
+                displaySeconds.value +
+                " seconds",
+            );
+          }
+
+          function pauseTimer() {
+            timerState.value = "paused";
+            stopInterval();
+            announce(
+              "Timer paused at " +
+                displayHours.value +
+                ":" +
+                displayMinutes.value +
+                ":" +
+                displaySeconds.value,
+            );
+          }
+
+          function resumeTimer() {
+            timerState.value = "running";
+            startInterval();
+            announce("Timer resumed");
+          }
+
+          function resetTimer() {
+            stopInterval();
+            timerState.value = "idle";
+            remainingSeconds.value = 0;
+            announce("Timer reset");
+          }
+
+          // ── Modal ──
+          const closeBtn = ref(null);
+
+          function closeModal() {
+            showModal.value = false;
+          }
+
+          // Focus close button when modal opens
+          watch(showModal, async (val) => {
+            if (val) {
+              await nextTick();
+              closeBtn.value?.focus();
+            }
+          });
+
+          // Global keyboard handler
+          function onKeydown(e) {
+            if (e.key === "Escape" && showModal.value) {
+              closeModal();
+            }
+            // Trap focus in modal
+            if (showModal.value && e.key === "Tab") {
+              e.preventDefault();
+              closeBtn.value?.focus();
+            }
+          }
+
+          onMounted(() => {
+            document.addEventListener("keydown", onKeydown);
+          });
+
+          onUnmounted(() => {
+            document.removeEventListener("keydown", onKeydown);
+            stopInterval();
+          });
+
+          return {
+            theme,
+            setTheme,
+            eventName,
+            eventDate,
+            isEditingName,
+            nameInput,
+            dateInput,
+            startEditingName,
+            confirmName,
+            openDatePicker,
+            formattedDate,
+            inputHours,
+            inputMinutes,
+            inputSeconds,
+            hoursInvalid,
+            minutesInvalid,
+            secondsInvalid,
+            onHoursInput,
+            onMinutesInput,
+            onSecondsInput,
+            clampHours,
+            clampMinutes,
+            clampSeconds,
+            totalInputSeconds,
+            remainingSeconds,
+            timerState,
+            showModal,
+            displayHours,
+            displayMinutes,
+            displaySeconds,
+            timerAriaLabel,
+            ariaAnnouncement,
+            startTimer,
+            pauseTimer,
+            resumeTimer,
+            resetTimer,
+            closeModal,
+            closeBtn,
+          };
+        },
+      }).mount("#app");
+    </script>
+  </body>
 </html>
